@@ -1,0 +1,1 @@
+this is collection of jupyter notebooks, examples and dataset from Udacity Machine Learning with Pytorch nanodegree. Covering range of topics from supervised learnign to deep learning and model optimization. 
