@@ -1,1 +1,5 @@
+#checkpoints
 .ipynb_checkpoints/
+
+#raw image data (https://s3.amazonaws.com/content.udacity-data.com/nd089/flower_data.tar.gz)
+4_Projects/p2_imageclass/flower_data/
