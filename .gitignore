@@ -13,6 +13,7 @@
 *.pth
 4_Projects/p2_imageclass/*.pth
 4_Projects/p2_imageclass/checkpoint_vgg16_flowers_small_dataset_model.pth
+4_Projects/p2_imageclass/__pycache__/
 
 #backup unfinished file
 4_Projects/p2_imageclass/Image Classifier Project_old_backup.ipynb
