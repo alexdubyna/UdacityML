@@ -437,6 +437,9 @@ def save_model(model, optimizer, train_dataset_ind_labels,  **kwargs):
     if arch == 'Vgg16': 
         for param in model.classifier.parameters():
             param.requires_grad = False
+    elif arch == 'alexnet': 
+        for param in model.classifier.parameters():
+            param.requires_grad = False    
     elif arch == 'resnet18':
         for param in model.fc.parameters():
             param.requires_grad = False
