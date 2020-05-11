@@ -180,8 +180,13 @@ def load_checkpoint(filepath):
     checkpoint = torch.load(filepath)
     
     #initiate model & optimizer
-    model = models.vgg16(pretrained=True)
-    optimizer = optim.Adam(model.classifier.parameters())
+    if checkpoint['arch'] == 'Vgg16':
+        model = models.vgg16(pretrained=True)
+        optimizer = optim.Adam(model.classifier.parameters())
+        
+    elif checkpoint['arch'] == 'resnet18':
+        model = models.resnet18(pretrained=True)
+        optimizer = optim.Adam(model.classifier.parameters())
 
     #update initiated model with trained model state for ready-to-be-used state   
     model.classifier = checkpoint['classifier']
@@ -215,34 +220,35 @@ def predict(image_path, model, topk):
 def create_model(**kwargs):
     
     #getting model parameters
-    arch = kwargs.get('arch', 'vgg16')
-    learning_rate = kwargs.get('learning_rate', 0.003)
+    arch = kwargs.get('arch')
     hidden_units = kwargs.get('hidden_units', 512)
     user_device = kwargs.get('gpu', 'cpu')
-    
+    learning_rate = kwargs.get('learning_rate', 0.003)
 
+       
     #get yourself a pretrained model from pytorh set
     if arch == 'Vgg16':
         model = models.vgg16(pretrained=True)
-    elif arch == 'Other':
+        
+    elif arch == 'resnet18':
         model = models.resnet18(pretrained=True)
+        
     else:
         print ('You have selected unsupported model architechture')
 
-    #freeze model weights
-    for param in model.parameters():
+    #freeze feature weights (important this comes before assigning classifier)
+    for param in model.features.parameters():
         param.requires_grad = False
-
-
+    
     # Use GPU if it's available when requested by user and prevent from using if not
     if user_device == 'cuda':
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     else:
         device = torch.device("cpu")
-
-    #update model classifier using user specified parameters
     
-    model.classifier = nn.Sequential(nn.Linear(25088,4096),
+    #define classifier supported by selected architechture
+    if arch == 'Vgg16':
+        model.classifier = nn.Sequential(nn.Linear(25088,4096),
                                      nn.ReLU(),
                                      nn.Dropout(0.3),
                                      nn.Linear(4096,hidden_units),
@@ -250,6 +256,22 @@ def create_model(**kwargs):
                                      nn.Dropout(0.3),
                                      nn.Linear(hidden_units, 5), #change this to 102 on real dataset
                                      nn.LogSoftmax(dim=1))
+        
+    elif arch == 'resnet18':
+        model.classifier = nn.Sequential(nn.Linear(512,512),
+                                     nn.ReLU(),
+                                     nn.Dropout(0.3),
+                                     nn.Linear(512,hidden_units),
+                                     nn.ReLU(),
+                                     nn.Dropout(0.3),
+                                     nn.Linear(hidden_units, 5), #change this to 102 on real dataset
+                                     nn.LogSoftmax(dim=1))
+    else:
+        print ('You have selected unsupported model architechture')
+    
+    for param in model.classifier.parameters():
+        param.requires_grad = True
+
     #define loss function
     criterion = nn.NLLLoss()
 
@@ -261,16 +283,17 @@ def create_model(**kwargs):
 
     
     print ("model_architechture: {}".format(arch),
-                  "learning_rate: {:3f}.. ".format(learning_rate),
                   "hidden_units: {:.3f}.. ".format(hidden_units),
+           "learning_rate: {:3f}.. ".format(learning_rate),
                   "training_on: {}".format(user_device)          )
-    
-    
+       
     return model, criterion, optimizer
     
 
     
 def train_model(data, model, criterion, optimizer, **kwargs):
+ 
+    
     #training loop
     epochs = kwargs.get('epochs', 1)
     user_device = kwargs.get('gpu', 'cpu')
@@ -278,12 +301,12 @@ def train_model(data, model, criterion, optimizer, **kwargs):
     step=0
     print_every=2 #more handy output then seeing single output per single epoch. Change this to smth larger on real dataset
     
+    
     # Use GPU if it's available when requested by user and prevent from using if not
     if user_device == 'cuda':
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     else:
         device = torch.device("cpu")
-    
     
     for e in range(epochs):
         train_loss = 0
@@ -344,18 +367,24 @@ def train_model(data, model, criterion, optimizer, **kwargs):
                   "Validation Accuracy: {:.3f}".format(accuracy/len(dataloaders['valid_dataloader']))
                       #,    "Top-n Acc.: {:.3f}".format(accuracyn/len(valid_dataloader))
                      )
+    print (  "epochs: {:.3f}.. ".format(epochs),
+                  "training_on: {}".format(user_device)          )
+    
     print ('model was successfully trained')
+    
     
     
 def save_model(model, optimizer, train_dataset_ind_labels,  **kwargs):
     
     epochs = kwargs.get('epochs', None)
+    arch = kwargs.get('arch', 'Vgg16')
     save_dir = kwargs.get('save_dir', '')
-    save_file_name = save_dir + '/checkpoint.pth'
+    save_file_name = save_dir + '/' + arch + '_checkpoint.pth'
     
     model.class_to_idx = train_dataset_ind_labels
     model.to('cpu')
     checkpoint = {'classifier': model.classifier,
+                  'arch': arch,
                   #'category_names': cat_to_name,
                   'epochs': epochs,
                   'class_to_idx': train_dataset_ind_labels,
@@ -365,5 +394,6 @@ def save_model(model, optimizer, train_dataset_ind_labels,  **kwargs):
     torch.save(checkpoint, save_file_name)
     
     print ("saved_as: {}".format(save_file_name),
-                  "epochs: {}.. ".format(epochs))
+                  "epochs: {}.. ".format(epochs),
+          "architechture: {}.. ".format(arch))
     print ('model was successfully saved')
