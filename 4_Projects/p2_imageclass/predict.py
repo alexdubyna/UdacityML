@@ -36,6 +36,6 @@ utils.show_inference_result(args_predict['path_to_image'], model,
 #python3 predict.py 'testpicimage_2.jpg' checkpoint_vgg16_flowers_small_dataset_model.pth --top_k 3 --category_names test_cat.json --gpu 'cuda'
 
 #python3 predict.py 'testpicimage_2.jpg' resnet18_checkpoint.pth --top_k 3 --category_names test_cat.json
-#python3 predict.py 'testpicimage_2.jpg' Vgg16_checkpoint.pth --top_k 3 --category_names test_cat.json
-#python3 predict.py 'testpicimage_2.jpg' alexnet_checkpoint.pth --top_k 3 --category_names test_cat.json
+#python3 predict.py 'testpicimage_2.jpg' Vgg16_checkpoint.pth --top_k 4 --category_names test_cat.json
+#python3 predict.py 'testpicimage.jpg' alexnet_checkpoint.pth --top_k 5 --category_names test_cat.json
 

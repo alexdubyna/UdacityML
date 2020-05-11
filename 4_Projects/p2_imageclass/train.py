@@ -46,7 +46,7 @@ utils.save_model(model, optimizer, train_dataset_ind_labels,
 ###################        test line  for terminal run    ##########################
 
 #python3 train.py 'flower_data_small_set'
-#python3 train.py 'flower_data_small_set' --arch 'resnet18' --learning_rate 0.05 --hidden_units 128 --epochs 1
+#python3 train.py 'flower_data_small_set' --arch 'resnet18' --learning_rate 0.05 --hidden_units 512 --epochs 1
 #python3 train.py 'flower_data_small_set' --arch 'Vgg16' --learning_rate 0.05 --hidden_units 128 --epochs 1
 #python3 train.py 'flower_data_small_set' --arch 'alexnet' --learning_rate 0.002 --hidden_units 256 --epochs 5
 
