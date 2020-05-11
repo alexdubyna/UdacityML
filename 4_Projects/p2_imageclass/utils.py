@@ -182,21 +182,36 @@ def load_checkpoint(filepath):
     #initiate model & optimizer
     if checkpoint['arch'] == 'Vgg16':
         model = models.vgg16(pretrained=True)
-        optimizer = optim.Adam(model.classifier.parameters())
+        for param in model.features.parameters():
+            param.requires_grad = False
+        for param in model.classifier.parameters():
+            param.requires_grad = False
+        optimizer = optim.Adam(model.classifier.parameters(), lr = 0.01)
+        model.classifier = checkpoint['classifier']
         
     elif checkpoint['arch'] == 'resnet18':
         model = models.resnet18(pretrained=True)
-        optimizer = optim.Adam(model.classifier.parameters())
+        for param in model.parameters():
+            param.requires_grad = False
+        for param in model.fc.parameters():
+            param.requires_grad = False   
+        optimizer = optim.Adam(model.fc.parameters(), lr = 0.01)
+        model.fc = checkpoint['classifier']
 
     #update initiated model with trained model state for ready-to-be-used state   
-    model.classifier = checkpoint['classifier']
     model.load_state_dict(checkpoint['state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_dict'])
     model.class_to_idx = checkpoint['class_to_idx']
-    model.category_names = checkpoint['category_names']
-
     
-    return model
+    #default category_names, just because i'm lazy to get therm through train-save-load loop without real need
+    with open('cat_to_name.json', 'r') as f:
+        cat_to_name = json.load(f)
+    
+    model.category_names = cat_to_name
+    
+    model.eval()
+    
+    return model, optimizer
 
 
 def predict(image_path, model, topk):
@@ -229,17 +244,21 @@ def create_model(**kwargs):
     #get yourself a pretrained model from pytorh set
     if arch == 'Vgg16':
         model = models.vgg16(pretrained=True)
+        for param in model.features.parameters():
+            param.requires_grad = False
+    
         
     elif arch == 'resnet18':
         model = models.resnet18(pretrained=True)
+        for param in model.parameters():
+            param.requires_grad = False
+    
         
     else:
         print ('You have selected unsupported model architechture')
 
     #freeze feature weights (important this comes before assigning classifier)
-    for param in model.features.parameters():
-        param.requires_grad = False
-    
+
     # Use GPU if it's available when requested by user and prevent from using if not
     if user_device == 'cuda':
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -258,7 +277,7 @@ def create_model(**kwargs):
                                      nn.LogSoftmax(dim=1))
         
     elif arch == 'resnet18':
-        model.classifier = nn.Sequential(nn.Linear(512,512),
+        model.fc = nn.Sequential(nn.Linear(512,512),
                                      nn.ReLU(),
                                      nn.Dropout(0.3),
                                      nn.Linear(512,hidden_units),
@@ -268,23 +287,30 @@ def create_model(**kwargs):
                                      nn.LogSoftmax(dim=1))
     else:
         print ('You have selected unsupported model architechture')
-    
-    for param in model.classifier.parameters():
-        param.requires_grad = True
+
+    if arch == 'Vgg16': 
+        for param in model.classifier.parameters():
+            param.requires_grad = True
+    elif arch == 'resnet18':
+        for param in model.fc.parameters():
+            param.requires_grad = True
 
     #define loss function
     criterion = nn.NLLLoss()
 
     # Only train the classifier parameters, feature parameters are frozen
-    optimizer = optim.Adam(model.classifier.parameters(), lr=learning_rate)
+    if arch == 'Vgg16':
+        optimizer = optim.Adam(model.classifier.parameters(), lr=learning_rate)
+    elif arch == 'resnet18':
+        optimizer = optim.Adam(model.fc.parameters(), lr=learning_rate)
 
     #move model to available device
     model.to(device);
 
     
     print ("model_architechture: {}".format(arch),
-                  "hidden_units: {:.3f}.. ".format(hidden_units),
-           "learning_rate: {:3f}.. ".format(learning_rate),
+                  "hidden_units: {} ".format(hidden_units),
+           "learning_rate: {} ".format(learning_rate),
                   "training_on: {}".format(user_device)          )
        
     return model, criterion, optimizer
@@ -367,7 +393,7 @@ def train_model(data, model, criterion, optimizer, **kwargs):
                   "Validation Accuracy: {:.3f}".format(accuracy/len(dataloaders['valid_dataloader']))
                       #,    "Top-n Acc.: {:.3f}".format(accuracyn/len(valid_dataloader))
                      )
-    print (  "epochs: {:.3f}.. ".format(epochs),
+    print (  "epochs: {} ".format(epochs),
                   "training_on: {}".format(user_device)          )
     
     print ('model was successfully trained')
@@ -375,15 +401,28 @@ def train_model(data, model, criterion, optimizer, **kwargs):
     
     
 def save_model(model, optimizer, train_dataset_ind_labels,  **kwargs):
-    
+       
     epochs = kwargs.get('epochs', None)
     arch = kwargs.get('arch', 'Vgg16')
     save_dir = kwargs.get('save_dir', '')
     save_file_name = save_dir + '/' + arch + '_checkpoint.pth'
     
+    if arch == 'Vgg16': 
+        for param in model.classifier.parameters():
+            param.requires_grad = False
+    elif arch == 'resnet18':
+        for param in model.fc.parameters():
+            param.requires_grad = False
+    
     model.class_to_idx = train_dataset_ind_labels
     model.to('cpu')
-    checkpoint = {'classifier': model.classifier,
+    
+    if arch == 'Vgg16':
+        clsf = model.classifier
+    elif arch == 'resnet18':
+        clsf = model.fc
+    
+    checkpoint = {'classifier': clsf,
                   'arch': arch,
                   #'category_names': cat_to_name,
                   'epochs': epochs,
@@ -394,6 +433,6 @@ def save_model(model, optimizer, train_dataset_ind_labels,  **kwargs):
     torch.save(checkpoint, save_file_name)
     
     print ("saved_as: {}".format(save_file_name),
-                  "epochs: {}.. ".format(epochs),
-          "architechture: {}.. ".format(arch))
+                  "epochs: {} ".format(epochs),
+          "architechture: {} ".format(arch))
     print ('model was successfully saved')

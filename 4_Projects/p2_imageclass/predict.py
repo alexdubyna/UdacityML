@@ -21,7 +21,7 @@ args_predict = vars(parser.parse_args())
 
 
 #####################     inference result shown to user      ####################
-model = utils.load_checkpoint(args_predict['path_to_model_checkpoint']) #load model from save
+model, optimizer = utils.load_checkpoint(args_predict['path_to_model_checkpoint']) #load model from save
 utils.show_inference_result(args_predict['path_to_image'], model,
                             top_k = args_predict['top_k'],
                            gpu = args_predict['gpu'],
@@ -33,4 +33,7 @@ utils.show_inference_result(args_predict['path_to_image'], model,
 ###################        test line  for terminal run    ##########################
 #don't forget to 'source activate ENV' you are working with
 
-#python3 predict.py 'testpicimage_2.jpg' checkpoint_vgg16_flowers_small_dataset_model.pth --top_k 3 --category_name test_cat.json --gpu 'cuda'
+#python3 predict.py 'testpicimage_2.jpg' checkpoint_vgg16_flowers_small_dataset_model.pth --top_k 3 --category_names test_cat.json --gpu 'cuda'
+
+#python3 predict.py 'testpicimage_2.jpg' resnet18_checkpoint.pth --top_k 3 --category_names test_cat.json
+#python3 predict.py 'testpicimage_2.jpg' Vgg16_checkpoint.pth --top_k 3 --category_names test_cat.json
