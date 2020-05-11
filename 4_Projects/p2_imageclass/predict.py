@@ -13,8 +13,8 @@ parser = argparse.ArgumentParser (description = "Train your own image recognitio
 parser.add_argument ('path_to_image', type = str, help = 'Path to test image for prediction')
 parser.add_argument ('path_to_model_checkpoint', type = str, help = 'Path to model checkpoint to use')
 parser.add_argument ('--category_names', type = str, default = 'cat_to_name.json', help = 'Category names for predicted classes')
-parser.add_argument ('--top_k', type = int, default = 5, help = 'Top-N predicted classes')
-parser.add_argument ('--gpu', type = str, default = 'cpu', help = "to enable gpu calc use 'cuda'")
+parser.add_argument ('--top_k', type = int, choices = range(1,10), default = 5, help = 'Top-N predicted classes')
+parser.add_argument ('--gpu', type = str, choices = ['cuda', 'cpu'], default = 'cpu', help = "to enable gpu calc use 'cuda'")
 
 #resulting dictionary of arguments
 args_predict = vars(parser.parse_args()) 
