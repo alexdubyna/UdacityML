@@ -8,7 +8,7 @@ import utils
 ####################        collect parameters from command line         #########################
 
 # collect input arguments
-parser = argparse.ArgumentParser (description = "Train your own image recognition neural network")
+parser = argparse.ArgumentParser (description = "Test your own image recognition neural network")
 
 parser.add_argument ('path_to_image', type = str, help = 'Path to test image for prediction')
 parser.add_argument ('path_to_model_checkpoint', type = str, help = 'Path to model checkpoint to use')
@@ -30,7 +30,7 @@ utils.show_inference_result(args_predict['path_to_image'], model,
 
 
 
-###################        tets line  for terminal run    ##########################
+###################        test line  for terminal run    ##########################
 #don't forget to 'source activate ENV' you are working with
 
 #python3 predict.py 'testpicimage_2.jpg' checkpoint_vgg16_flowers_small_dataset_model.pth --top_k 3 --category_name test_cat.json --gpu 'cuda'

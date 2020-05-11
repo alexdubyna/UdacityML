@@ -47,7 +47,7 @@ def prepare_data(data_dir):
     'test_dataloader' : torch.utils.data.DataLoader(test_dataset, batch_size=32, shuffle=True),
     'valid_dataloader' : torch.utils.data.DataLoader(valid_dataset, batch_size=32, shuffle=True)}
     
-    return dataloaders
+    return dataloaders, train_dataset.class_to_idx
 
 
 def load_json(file):
@@ -171,7 +171,7 @@ def show_inference_result(test_img, model, **kwargs):
 
     model.to('cpu')
 
-######################################      model related functions     ##########################
+######################################      model usage related functions     ##########################
 
 def load_checkpoint(filepath):
     
@@ -207,5 +207,163 @@ def predict(image_path, model, topk):
     probs, classes = probabilities.topk(topk, dim=1)
     probs, classes = probs.detach().numpy(), classes.detach().numpy()
     return probs, classes
+
+
+#######################    model creation and training functions #######################
+#arch, learning_rate, hidden_units, gpu
+
+def create_model(**kwargs):
+    
+    #getting model parameters
+    arch = kwargs.get('arch', 'vgg16')
+    learning_rate = kwargs.get('learning_rate', 0.003)
+    hidden_units = kwargs.get('hidden_units', 512)
+    user_device = kwargs.get('gpu', 'cpu')
     
 
+    #get yourself a pretrained model from pytorh set
+    if arch == 'Vgg16':
+        model = models.vgg16(pretrained=True)
+    elif arch == 'Other':
+        model = models.resnet18(pretrained=True)
+    else:
+        print ('You have selected unsupported model architechture')
+
+    #freeze model weights
+    for param in model.parameters():
+        param.requires_grad = False
+
+
+    # Use GPU if it's available when requested by user and prevent from using if not
+    if user_device == 'cuda':
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    else:
+        device = torch.device("cpu")
+
+    #update model classifier using user specified parameters
+    
+    model.classifier = nn.Sequential(nn.Linear(25088,4096),
+                                     nn.ReLU(),
+                                     nn.Dropout(0.3),
+                                     nn.Linear(4096,hidden_units),
+                                     nn.ReLU(),
+                                     nn.Dropout(0.3),
+                                     nn.Linear(hidden_units, 5), #change this to 102 on real dataset
+                                     nn.LogSoftmax(dim=1))
+    #define loss function
+    criterion = nn.NLLLoss()
+
+    # Only train the classifier parameters, feature parameters are frozen
+    optimizer = optim.Adam(model.classifier.parameters(), lr=learning_rate)
+
+    #move model to available device
+    model.to(device);
+
+    
+    print ("model_architechture: {}".format(arch),
+                  "learning_rate: {:3f}.. ".format(learning_rate),
+                  "hidden_units: {:.3f}.. ".format(hidden_units),
+                  "training_on: {}".format(user_device)          )
+    
+    
+    return model, criterion, optimizer
+    
+
+    
+def train_model(data, model, criterion, optimizer, **kwargs):
+    #training loop
+    epochs = kwargs.get('epochs', 1)
+    user_device = kwargs.get('gpu', 'cpu')
+    dataloaders = data
+    step=0
+    print_every=2 #more handy output then seeing single output per single epoch. Change this to smth larger on real dataset
+    
+    # Use GPU if it's available when requested by user and prevent from using if not
+    if user_device == 'cuda':
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    else:
+        device = torch.device("cpu")
+    
+    
+    for e in range(epochs):
+        train_loss = 0
+        for images, labels in dataloaders['train_dataloader']:
+
+            step += 1
+            images, labels = images.to(device), labels.to(device) # Move images and label tensors to the default device
+            optimizer.zero_grad() # clear gradients
+
+            log_probabilities = model.forward(images)  #get logarithm of probabilities of a class
+            loss = criterion(log_probabilities, labels) #calculate loss
+            loss.backward() #backpropagate loss to update weights for next step
+            optimizer.step()
+            train_loss += loss.item()
+
+
+            if step % print_every == 0:
+                test_loss = 0
+                accuracy = 0
+                accuracyn = 0
+                model.eval() #enable all layers
+
+                with torch.no_grad():
+
+                    for images, labels in dataloaders['valid_dataloader']:
+
+                        #images = images.view(images.shape[0], 3, -1) #flatten image into vector
+                        #feed-forward validation data through current state of model
+                        images, labels = images.to(device), labels.to(device) #move data to available device
+                        log_probabilities = model.forward(images) #get log probs
+                        loss = criterion(log_probabilities, labels) #get test loss
+                        test_loss += loss.item()
+
+                        #calculate accuracy for current state of model
+                        probabilities = torch.exp(log_probabilities) #predicted class probabilities
+                        top_p, top_class = probabilities.topk(1, dim=1) #get top-1 predicted class & its' probabilities
+                        equals = top_class == labels.view(*top_class.shape) #compare predicted to real labels
+                        accuracy += torch.mean(equals.type(torch.FloatTensor)) #calculate accuracy
+                        #revisit this bit on video, not sure accuracy formula stays same for top-5 classes accuracy
+
+                        #calculating top-5 classes accuracy
+                        #top_p_n, top_class_n = probabilities.topk(3, dim=1)
+                        #initiate all-False comparison tensor
+                        #equals_n = torch.zeros(top_class_n.shape[0], dtype=torch.bool) 
+                        #
+                        #for j in range(top_class_n.shape[0]): #for every test row in predictions
+                        #    for i in range(top_class_n.shape[1]): #compare every element from topk to see if at least
+                        #        if top_class_n[j][i] == labels[j]: #one of those match to the test data picture label
+                        #            equals_n[j] = True #and it it matches - update comparison sheet
+                        #accuracyn += torch.mean(equals_n.type(torch.FloatTensor)) #calculate accuracy for top-n elements
+
+                model.train() #enable dropout again
+
+                #some output to see state of calculations during training & validation
+                print("Epoch: {}/{}.. ".format(e+1, epochs),
+                  "Training Loss: {:.3f}.. ".format(train_loss/len(dataloaders['train_dataloader'])),
+                  "Validation Loss: {:.3f}.. ".format(test_loss/len(dataloaders['valid_dataloader'])),
+                  "Validation Accuracy: {:.3f}".format(accuracy/len(dataloaders['valid_dataloader']))
+                      #,    "Top-n Acc.: {:.3f}".format(accuracyn/len(valid_dataloader))
+                     )
+    print ('model was successfully trained')
+    
+    
+def save_model(model, optimizer, train_dataset_ind_labels,  **kwargs):
+    
+    epochs = kwargs.get('epochs', None)
+    save_dir = kwargs.get('save_dir', '')
+    save_file_name = save_dir + '/checkpoint.pth'
+    
+    model.class_to_idx = train_dataset_ind_labels
+    model.to('cpu')
+    checkpoint = {'classifier': model.classifier,
+                  #'category_names': cat_to_name,
+                  'epochs': epochs,
+                  'class_to_idx': train_dataset_ind_labels,
+                  'optimizer_dict': optimizer.state_dict(),
+                  'state_dict': model.state_dict()}
+
+    torch.save(checkpoint, save_file_name)
+    
+    print ("saved_as: {}".format(save_file_name),
+                  "epochs: {}.. ".format(epochs))
+    print ('model was successfully saved')
