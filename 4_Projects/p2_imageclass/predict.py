@@ -37,3 +37,5 @@ utils.show_inference_result(args_predict['path_to_image'], model,
 
 #python3 predict.py 'testpicimage_2.jpg' resnet18_checkpoint.pth --top_k 3 --category_names test_cat.json
 #python3 predict.py 'testpicimage_2.jpg' Vgg16_checkpoint.pth --top_k 3 --category_names test_cat.json
+#python3 predict.py 'testpicimage_2.jpg' alexnet_checkpoint.pth --top_k 3 --category_names test_cat.json
+

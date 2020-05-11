@@ -186,16 +186,25 @@ def load_checkpoint(filepath):
             param.requires_grad = False
         for param in model.classifier.parameters():
             param.requires_grad = False
-        optimizer = optim.Adam(model.classifier.parameters(), lr = 0.01)
+        optimizer = optim.Adam(model.classifier.parameters())
         model.classifier = checkpoint['classifier']
-        
+    
+    elif checkpoint['arch'] == 'alexnet':
+        model = models.alexnet(pretrained=True)
+        for param in model.features.parameters():
+            param.requires_grad = False
+        for param in model.classifier.parameters():
+            param.requires_grad = False
+        optimizer = optim.Adam(model.classifier.parameters())
+        model.classifier = checkpoint['classifier']
+    
     elif checkpoint['arch'] == 'resnet18':
         model = models.resnet18(pretrained=True)
         for param in model.parameters():
             param.requires_grad = False
         for param in model.fc.parameters():
             param.requires_grad = False   
-        optimizer = optim.Adam(model.fc.parameters(), lr = 0.01)
+        optimizer = optim.Adam(model.fc.parameters())
         model.fc = checkpoint['classifier']
 
     #update initiated model with trained model state for ready-to-be-used state   
@@ -246,14 +255,17 @@ def create_model(**kwargs):
         model = models.vgg16(pretrained=True)
         for param in model.features.parameters():
             param.requires_grad = False
-    
-        
+         
     elif arch == 'resnet18':
         model = models.resnet18(pretrained=True)
         for param in model.parameters():
             param.requires_grad = False
     
-        
+    elif arch == 'alexnet':
+        model = models.alexnet(pretrained=True)
+        for param in model.features.parameters():
+            param.requires_grad = False    
+
     else:
         print ('You have selected unsupported model architechture')
 
@@ -285,6 +297,17 @@ def create_model(**kwargs):
                                      nn.Dropout(0.3),
                                      nn.Linear(hidden_units, 5), #change this to 102 on real dataset
                                      nn.LogSoftmax(dim=1))
+    
+    elif arch == 'alexnet':
+        model.classifier = nn.Sequential(nn.Linear(9216,4096),
+                                     nn.ReLU(),
+                                     nn.Dropout(0.3),
+                                     nn.Linear(4096,hidden_units),
+                                     nn.ReLU(),
+                                     nn.Dropout(0.3),
+                                     nn.Linear(hidden_units, 5), #change this to 102 on real dataset
+                                     nn.LogSoftmax(dim=1))        
+    
     else:
         print ('You have selected unsupported model architechture')
 
@@ -294,7 +317,10 @@ def create_model(**kwargs):
     elif arch == 'resnet18':
         for param in model.fc.parameters():
             param.requires_grad = True
-
+    elif arch == 'alexnet': 
+        for param in model.classifier.parameters():
+            param.requires_grad = True
+            
     #define loss function
     criterion = nn.NLLLoss()
 
@@ -303,7 +329,8 @@ def create_model(**kwargs):
         optimizer = optim.Adam(model.classifier.parameters(), lr=learning_rate)
     elif arch == 'resnet18':
         optimizer = optim.Adam(model.fc.parameters(), lr=learning_rate)
-
+    elif arch == 'alexnet':
+        optimizer = optim.Adam(model.classifier.parameters(), lr=learning_rate)
     #move model to available device
     model.to(device);
 
@@ -421,6 +448,8 @@ def save_model(model, optimizer, train_dataset_ind_labels,  **kwargs):
         clsf = model.classifier
     elif arch == 'resnet18':
         clsf = model.fc
+    elif arch == 'alexnet':
+        clsf = model.classifier
     
     checkpoint = {'classifier': clsf,
                   'arch': arch,
