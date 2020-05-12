@@ -2,6 +2,14 @@
 
 This repo contains ready project code for Udacity's AI Programming with Python Nanodegree program. In this project, code was developed for an image classifier built with PyTorch, then converted into a command line application.
 
+##TODO based on review:
+* doh! 102 hardcoded classes to be replaced by amount of classes in input data 
+* change image processor for testing model. It does not scale picture to a square. Required method is to scale manually
+* --gpu does not work properly while testing model (need to pass image tensor to gpu as well, as model is already there).E.g. passing device argument to show_inference_results and subsequently to predict_image and moving to cuda if available will do the trick
+* read about layers in classifier for transfer learning and there impact. e.g. single layer might be better for transfer learning for higher prediction accuracy (will increase of epochs no compensate or not? When we need more complex multi-layer classifiers at the end of models?)
+* remove limits in script input arguments on learning rate, epochs etc
+
+
 Main files:
 ##Image Classifier Project.ipynb
 Jupyter notebook with code to train a neural network
