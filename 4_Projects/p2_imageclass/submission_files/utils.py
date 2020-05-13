@@ -149,7 +149,7 @@ def show_inference_result(test_img, model, **kwargs):
     model.to(device)
     # TODO: Display an image along with the top 5 classes
     img = mpimg.imread(test_img) #read image for first plot
-    probs, classes = predict(test_img, model, topk) #run model predictions - prepare data for second chart
+    probs, classes = predict(test_img, model, topk, device = device) #run model predictions - prepare data for second chart
     if category_names:
         classes_labels = convert_indexes_to_labels(classes, model, category_names = category_names) #prepare labels
     else:
@@ -223,13 +223,16 @@ def load_checkpoint(filepath):
     return model #, optimizer
 
 
-def predict(image_path, model, topk):
+def predict(image_path, model, topk, **kwargs):
     """ Predict the class (or classes) of an image using a trained deep learning model"""
     
+    device = kwargs.get('device', 'cpu')
+
     # TODO: Implement the code to predict the class from an image file
     img = process_image(image_path)
     #img = torch.from_numpy(img).type(torch.FloatTensor) 
     model.eval()
+    img.to(device)
     #log_probabilities = model.forward(img.view(1,3,224,224))
     log_probabilities = model.forward(img.unsqueeze(0)) #this is a bit more convenient way to add '1' as dimension at index '0'
     probabilities = torch.exp(log_probabilities)

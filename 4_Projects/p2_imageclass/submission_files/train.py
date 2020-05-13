@@ -11,9 +11,9 @@ parser = argparse.ArgumentParser (description = "Train your own image recognitio
 parser.add_argument ('data_dir', help = 'Data directory for model', type = str)
 parser.add_argument ('--save_dir', help = 'Provide saving directory', type = str, default = os.getcwd())
 parser.add_argument ('--arch',choices = ['Vgg16', 'resnet18', 'alexnet'], help = 'Vgg16 is default, alternatively use any other allowed options', type = str, default = 'Vgg16')
-parser.add_argument ('--learning_rate', choices = [0.0005, 0.001, 0.002, 0.003, 0.005, 0.01, 0.05], help = 'Learning rate, default is 0.003', type = float, default = 0.003)
-parser.add_argument ('--hidden_units', choices = [512, 256, 128], help = 'Hidden units in Classifier, default is 512', type = int, default = 512)
-parser.add_argument ('--epochs', choices = [1,2,3,5,8,13,21,34], help = 'Epochs, default is 1', type = int, default = 1)
+parser.add_argument ('--learning_rate', help = 'Learning rate, default is 0.003', type = float, default = 0.003)
+parser.add_argument ('--hidden_units', help = 'Hidden units in Classifier, default is 512', type = int, default = 512)
+parser.add_argument ('--epochs', help = 'Epochs, default is 1', type = int, default = 1)
 parser.add_argument ('--gpu',  choices = ['cuda', 'cpu'], help = "enable GPU calc, default is cpu, use 'cuda' for gpu", type = str, default = 'cpu')
 
 #resulting dictionary of arguments
